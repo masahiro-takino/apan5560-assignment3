@@ -61,9 +61,18 @@ def generate(num_images: int = 16):
     generated = (generated + 1.0) / 2.0
     grid = make_grid(generated, nrow=4)
 
-    image_tensor = grid.squeeze(0).numpy()
-    image_array = (image_tensor * 255).astype(np.uint8)
-    image = Image.fromarray(image_array, mode="L")
+    # make_grid returns a tensor with shape (C, H, W).
+    # Convert it to a NumPy image with shape (H, W, C).
+    image_tensor = grid.permute(1, 2, 0).numpy()
+    image_array = (image_tensor * 255).clip(0, 255).astype(np.uint8)
+
+    # MNIST is grayscale, but make_grid may return 3 channels.
+    # Handle both grayscale and RGB safely.
+    if image_array.shape[2] == 1:
+        image_array = image_array[:, :, 0]
+        image = Image.fromarray(image_array, mode="L")
+    else:
+        image = Image.fromarray(image_array)
 
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
